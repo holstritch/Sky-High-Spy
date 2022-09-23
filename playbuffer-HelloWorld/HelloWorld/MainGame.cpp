@@ -119,6 +119,27 @@ void UpdateAsteroids()
 			gameState.agentState = Agent8State::STATE_WALK;
 		}
 
+		// asteroids stay on screen
+		if (obj_asteroid.pos.y > DISPLAY_HEIGHT) 
+		{
+			obj_asteroid.pos.y = + 20;
+		}
+
+		else if (obj_asteroid.pos.y < 0)
+		{
+			obj_asteroid.pos.y = obj_asteroid.pos.y + 20, DISPLAY_HEIGHT;
+		}
+
+		else if (obj_asteroid.pos.x > DISPLAY_WIDTH) 
+		{
+			obj_asteroid.pos.x = +20;
+		}
+
+		else if (obj_asteroid.pos.x < 0)
+		{
+			obj_asteroid.pos.y = obj_asteroid.pos.x + 20, DISPLAY_HEIGHT;
+		}
+
 		Play::DrawObject(obj_asteroid);
 	}
 
