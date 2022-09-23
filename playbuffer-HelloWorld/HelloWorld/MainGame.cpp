@@ -2,9 +2,11 @@
 #define PLAY_USING_GAMEOBJECT_MANAGER
 #include "Play.h"
 
-int DISPLAY_WIDTH = 1280;
-int DISPLAY_HEIGHT = 720;
-int DISPLAY_SCALE = 1;
+constexpr int DISPLAY_WIDTH = 1280;
+constexpr int DISPLAY_HEIGHT = 720;
+constexpr int DISPLAY_SCALE = 1;
+
+constexpr float Agent8RotSpeed = 0.05f;
 
 enum class Agent8State
 {
@@ -28,13 +30,13 @@ enum GameObjectType
 	TYPE_NULL = -1,
 	TYPE_AGENT8,
 	TYPE_ASTEROID,
-
 };
 
 // function prototypes
 void PlayerControls();
 void SpawnAsteroids();
 void UpdateAgent8();
+void UpdateAsteroids();
 
 
 // entry point for the playbuffer program
@@ -46,6 +48,9 @@ void MainGameEntry(PLAY_IGNORE_COMMAND_LINE)
 	Play::CreateGameObject(TYPE_AGENT8, { 640, 360 }, 50, "agent8");
 	Play::CentreAllSpriteOrigins();
 	Play::SetSpriteOrigin("agent8_fly", 50, 100);
+	Play::SetSpriteOrigin("agent8_left", 50, 110);
+	Play::SetSpriteOrigin("agent8_right", 50, 110);
+	SpawnAsteroids();
 }
 
 // called by playbuffer once for each frame 
@@ -55,7 +60,7 @@ bool MainGameUpdate(float elapsedTime)
 
 	Play::DrawBackground();
 	PlayerControls();
-	SpawnAsteroids();
+	UpdateAsteroids();
 	UpdateAgent8();
 	Play::DrawFontText("105px", "REMAINING GEMS: " + std::to_string(gameState.remainingGems), { DISPLAY_WIDTH / 2, 50 }, Play::CENTRE);
 	Play::DrawFontText("64px", "ARROW KEYS TO ROTATE AND SPACE BAR TO LAUNCH", { DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - 30 }, Play::CENTRE);
@@ -67,30 +72,62 @@ bool MainGameUpdate(float elapsedTime)
 void PlayerControls() 
 {
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
-	Play::UpdateGameObject(obj_agent8, 1);
+	GameObject& obj_asteroid = Play::GetGameObjectByType(TYPE_ASTEROID);
 
-	// movement and anim
-	if (Play::KeyDown(VK_LEFT))
+	obj_agent8.pos = obj_asteroid.pos;
+	// movement and anim on asteroid
+	if (gameState.agentState == Agent8State::STATE_WALK) 
 	{
-		Play::SetSprite(obj_agent8, "agent8_left", 0.2f);
+		if (Play::KeyDown(VK_LEFT))
+		{
+			Play::SetSprite(obj_agent8, "agent8_left", 0.2f);
+			obj_agent8.rotation -= Agent8RotSpeed;
+		}
+		if (Play::KeyDown(VK_RIGHT))
+		{
+			Play::SetSprite(obj_agent8, "agent8_right", 0.2f);
+			obj_agent8.rotation += Agent8RotSpeed;
+		}
 
-	}
-	if (Play::KeyDown(VK_RIGHT))
-	{
-		Play::SetSprite(obj_agent8, "agent8_right", 0.2f);
+		Play::UpdateGameObject(obj_agent8);
 	}
 }
 void SpawnAsteroids() 
 {
-	GameObject& obj_asteroid = Play::GetGameObjectByType(TYPE_ASTEROID);
-	Play::CreateGameObject(TYPE_ASTEROID, { 300, 300 }, 50, "asteroid");
-	Play::DrawObject(obj_asteroid);
+	for (int i = 0; i < 3; i++) 
+	{
+		int myAsteroidId = Play::CreateGameObject(TYPE_ASTEROID, { rand() % DISPLAY_WIDTH, rand() % DISPLAY_HEIGHT }, 50, "asteroid");
+		GameObject& myAsteroid = Play::GetGameObject(myAsteroidId);
+
+		myAsteroid.velocity = { rand() % 2 + 1, rand() % 2 + 1};
+	}
+}
+
+void UpdateAsteroids() 
+{
+	std::vector<int> vAsteroidIds = Play::CollectGameObjectIDsByType(TYPE_ASTEROID);
+	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
+
+	for (int id_asteroids : vAsteroidIds) 
+	{
+		GameObject& obj_asteroid = Play::GetGameObject(id_asteroids);
+
+		Play::UpdateGameObject(obj_asteroid);
+
+		if (Play::IsColliding(obj_agent8, obj_asteroid))
+		{
+			gameState.agentState = Agent8State::STATE_WALK;
+		}
+
+		Play::DrawObject(obj_asteroid);
+	}
+
 }
 
 void UpdateAgent8() 
 {
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
-	Play::DrawObject(obj_agent8);
+	Play::DrawObjectRotated(obj_agent8);
 
 	switch (gameState.agentState) 
 	{
@@ -100,11 +137,11 @@ void UpdateAgent8()
 		break;
 
 	case Agent8State::STATE_FLY:
-		//flying
+		Play::SetSprite(obj_agent8, "agent8_fly", 0.2f);
 		break;
 
 	case Agent8State::STATE_DEAD:
-		// dead
+		Play::SetSprite(obj_agent8, "agent8_dead", 0.2f);
 		break;
 
 	} // end of switch
