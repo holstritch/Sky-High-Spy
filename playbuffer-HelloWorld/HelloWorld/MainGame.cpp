@@ -99,8 +99,9 @@ void SpawnAsteroids()
 		int myAsteroidId = Play::CreateGameObject(TYPE_ASTEROID, { rand() % DISPLAY_WIDTH, rand() % DISPLAY_HEIGHT }, 50, "asteroid");
 		GameObject& myAsteroid = Play::GetGameObject(myAsteroidId);
 
-		myAsteroid.velocity = { rand() % 2 + 1, rand() % 2 + 1};
-	}
+		myAsteroid.velocity = { rand() % 2 + (-1), rand() % 2 + 1 };
+
+	} 
 }
 
 void UpdateAsteroids() 
@@ -119,25 +120,28 @@ void UpdateAsteroids()
 			gameState.agentState = Agent8State::STATE_WALK;
 		}
 
-		// asteroids stay on screen
-		if (obj_asteroid.pos.y > DISPLAY_HEIGHT) 
+		Vector2f origin = PlayGraphics::Instance().GetSpriteOrigin(obj_asteroid.spriteId);
+		int wrapBorderSize = 20.0f;
+
+		// asteroids wrap around screen
+		if (obj_asteroid.pos.x - origin.x - wrapBorderSize > DISPLAY_WIDTH)
 		{
-			obj_asteroid.pos.y = + 20;
+			obj_asteroid.pos.x = 0.0f - wrapBorderSize + origin.x;
 		}
 
-		else if (obj_asteroid.pos.y < 0)
+		else if (obj_asteroid.pos.x + origin.x + wrapBorderSize < 0)
 		{
-			obj_asteroid.pos.y = obj_asteroid.pos.y + 20, DISPLAY_HEIGHT;
+			obj_asteroid.pos.x = DISPLAY_WIDTH + wrapBorderSize - origin.x;
 		}
 
-		else if (obj_asteroid.pos.x > DISPLAY_WIDTH) 
+		if (obj_asteroid.pos.y - origin.y - wrapBorderSize > DISPLAY_HEIGHT)
 		{
-			obj_asteroid.pos.x = +20;
+			obj_asteroid.pos.y = 0.0f - wrapBorderSize + origin.y;
 		}
 
-		else if (obj_asteroid.pos.x < 0)
+		else if (obj_asteroid.pos.y + origin.y + wrapBorderSize < 0)
 		{
-			obj_asteroid.pos.y = obj_asteroid.pos.x + 20, DISPLAY_HEIGHT;
+			obj_asteroid.pos.y = DISPLAY_HEIGHT + wrapBorderSize - origin.y;
 		}
 
 		Play::DrawObject(obj_asteroid);
