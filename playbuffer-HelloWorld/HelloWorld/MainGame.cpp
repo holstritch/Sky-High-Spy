@@ -12,6 +12,9 @@ constexpr float Agent8RotSpeed = 0.05f;
 constexpr float Agent8FlyingRotSpeed = 0.02f;
 constexpr float Agent8Speed = 4.0f;
 
+// storing the current asteroid
+int myAsteroid = 0;
+
 enum class Agent8State
 {
 	STATE_APPEAR = 0,
@@ -82,15 +85,16 @@ bool MainGameUpdate(float elapsedTime)
 void PlayerControls() 
 {
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
-	GameObject& obj_asteroid = Play::GetGameObjectByType(TYPE_ASTEROID);
 
 	float Agent8Angle = 0.1f;
-	// position on asteroid
-	obj_agent8.pos = obj_asteroid.pos;
 
 	// movement and anim on asteroid
 	if (gameState.agentState == Agent8State::STATE_ATTACHED) 
 	{
+		// position on current asteroid
+		GameObject& obj_asteroid = Play::GetGameObject(myAsteroid);
+		obj_agent8.pos = obj_asteroid.pos;
+
 		if (Play::KeyDown(VK_LEFT))
 		{
 			Play::SetSprite(obj_agent8, "agent8_left", 0.2f);
@@ -104,8 +108,11 @@ void PlayerControls()
 		if (Play::KeyPressed(VK_SPACE))
 		{
 			gameState.agentState = Agent8State::STATE_FLYING;
-		}
+			// destroy the asteroid agent8 jumps off
+			Play::DestroyGameObject(myAsteroid);
+			// function creates asteroid pieces 
 
+		}
 		Play::UpdateGameObject(obj_agent8);
 	}
 	// flying movement
@@ -197,11 +204,6 @@ void UpdateAsteroids()
 			obj_asteroid.pos.y = DISPLAY_HEIGHT + wrapBorderSize - origin.y;
 		}
 
-		if (gameState.agentState == Agent8State::STATE_FLYING)
-		{
-			// change this to only affect the asteroid attached to agent8
-			Play::SetSprite(obj_asteroid, "asteroid_pieces", 0);
-		}
 
 		Play::DrawObjectRotated(obj_asteroid);
 	}
@@ -255,30 +257,53 @@ void UpdateMeteor()
 void UpdateAgent8() 
 {
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
-	GameObject& obj_asteroid = Play::GetGameObjectByType(TYPE_ASTEROID);
 	GameObject& obj_meteor = Play::GetGameObjectByType(TYPE_METEOR);
 	Play::DrawObjectRotated(obj_agent8);
 
-	switch (gameState.agentState) 
+	switch (gameState.agentState)
 	{
 	case Agent8State::STATE_APPEAR:
-
-		if (Play::IsColliding(obj_agent8, obj_asteroid))
 		{
-			gameState.agentState = Agent8State::STATE_ATTACHED;
+			gameState.agentState = Agent8State::STATE_FLYING;
+
+			// collect asteroids as list of ints 
+			std::vector<int> vAsteroidIds = Play::CollectGameObjectIDsByType(TYPE_ASTEROID);
+			for (int id_asteroid : vAsteroidIds)
+			{
+				// int then gets each asteroid object 
+				GameObject& obj_asteroid = Play::GetGameObject(id_asteroid);
+				// obj_asteroid is now the current attached asteroid 
+				if (Play::IsColliding(obj_agent8, obj_asteroid))
+				{
+					obj_agent8.pos = obj_asteroid.pos;
+					// declaring myAsteroid as the current attached asteroid
+					myAsteroid = id_asteroid;
+					gameState.agentState = Agent8State::STATE_ATTACHED;
+
+				}
+			}
 		}
 		break;
 	case Agent8State::STATE_ATTACHED:
 		PlayerControls();
 		break;
 	case Agent8State::STATE_FLYING:
-		Play::SetSprite(obj_agent8, "agent8_fly", 0);
-		PlayerControls();
-
-		if (Play::IsColliding(obj_agent8, obj_asteroid)) 
 		{
-			obj_agent8.pos = obj_asteroid.pos;
+			Play::SetSprite(obj_agent8, "agent8_fly", 0);
+			PlayerControls();
 
+			std::vector<int> vAsteroidIds = Play::CollectGameObjectIDsByType(TYPE_ASTEROID);
+			for (int id_asteroid : vAsteroidIds)
+			{
+				GameObject& obj_asteroid = Play::GetGameObject(id_asteroid);
+
+				if (Play::IsColliding(obj_agent8, obj_asteroid))
+				{
+					obj_agent8.pos = obj_asteroid.pos;
+					myAsteroid = id_asteroid;
+					gameState.agentState = Agent8State::STATE_ATTACHED;
+				}
+			}
 		}
 		break;
 	case Agent8State::STATE_DEAD:
