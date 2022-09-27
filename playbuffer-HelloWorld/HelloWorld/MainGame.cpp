@@ -63,6 +63,7 @@ void MainGameEntry(PLAY_IGNORE_COMMAND_LINE)
 	Play::SetSpriteOrigin("agent8_right", 50, 110);
 	SpawnAsteroids();
 	SpawnMeteor();
+
 }
 
 // called by playbuffer once for each frame 
@@ -110,8 +111,9 @@ void PlayerControls()
 			gameState.agentState = Agent8State::STATE_FLYING;
 			// destroy the asteroid agent8 jumps off
 			Play::DestroyGameObject(myAsteroid);
-			// function creates asteroid pieces 
-
+			// create asteroid pieces 
+			// for each asteroid destroyed, spawn 3 asteroid pieces in its place, move them off screen then destroy
+			
 		}
 		Play::UpdateGameObject(obj_agent8);
 	}
@@ -167,7 +169,9 @@ void SpawnAsteroids()
 		GameObject& myAsteroid = Play::GetGameObject(myAsteroidId);
 
 		myAsteroid.velocity = { rand() % 2 + (-1), rand() % 2 + 1 };
+
 	} 
+
 }
 
 void UpdateAsteroids() 
@@ -203,7 +207,6 @@ void UpdateAsteroids()
 		{
 			obj_asteroid.pos.y = DISPLAY_HEIGHT + wrapBorderSize - origin.y;
 		}
-
 
 		Play::DrawObjectRotated(obj_asteroid);
 	}
@@ -309,7 +312,11 @@ void UpdateAgent8()
 	case Agent8State::STATE_DEAD:
 		Play::SetSprite(obj_agent8, "agent8_dead", 0.2f);
 
-		if (! Play::IsVisible(obj_agent8)) 
+		// TO DO: move agent8 off screen
+
+		// TO DO: change direction of sprite
+	
+		if (Play::IsLeavingDisplayArea(obj_agent8)) 
 		{
 			gameState.agentState = Agent8State::STATE_APPEAR;
 		}
