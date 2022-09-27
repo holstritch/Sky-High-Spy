@@ -9,7 +9,8 @@ constexpr int DISPLAY_SCALE = 1;
 constexpr int wrapBorderSize = 20.0f;
 
 constexpr float Agent8RotSpeed = 0.05f;
-float Agent8Angle = 0.2f;
+constexpr float Agent8FlyingRotSpeed = 0.02f;
+constexpr float Agent8Speed = 4.0f;
 
 enum class Agent8State
 {
@@ -51,10 +52,10 @@ void MainGameEntry(PLAY_IGNORE_COMMAND_LINE)
 {
 	Play::CreateManager(DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_SCALE);
 	Play::LoadBackground("Data\\Backgrounds\\background.png");
-	Play::StartAudioLoop("music");
+	//Play::StartAudioLoop("music");
 	Play::CreateGameObject(TYPE_AGENT8, { 640, 360 }, 50, "agent8_left");
 	Play::CentreAllSpriteOrigins();
-	Play::SetSpriteOrigin("agent8_fly", 50, 100);
+	Play::SetSpriteOrigin("agent8_fly", 50, 110);
 	Play::SetSpriteOrigin("agent8_left", 50, 110);
 	Play::SetSpriteOrigin("agent8_right", 50, 110);
 	SpawnAsteroids();
@@ -82,7 +83,11 @@ void PlayerControls()
 {
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
 	GameObject& obj_asteroid = Play::GetGameObjectByType(TYPE_ASTEROID);
+
+	float Agent8Angle = 0.1f;
+	// position on asteroid
 	obj_agent8.pos = obj_asteroid.pos;
+
 	// movement and anim on asteroid
 	if (gameState.agentState == Agent8State::STATE_ATTACHED) 
 	{
@@ -106,17 +111,43 @@ void PlayerControls()
 	// flying movement
 	if (gameState.agentState == Agent8State::STATE_FLYING) 
 	{
+		// reset position
+		obj_agent8.pos = obj_agent8.oldPos;
+		obj_agent8.pos += obj_agent8.velocity;
+		
+		//rotate
 		if (Play::KeyDown(VK_LEFT)) 
 		{
-			obj_agent8.rotation -= Agent8RotSpeed;
+			obj_agent8.rotation -= Agent8FlyingRotSpeed;
 		}
 		if (Play::KeyDown(VK_RIGHT))
 		{
-			obj_agent8.rotation += Agent8RotSpeed;
+			obj_agent8.rotation += Agent8FlyingRotSpeed;
+		}
+		// move in direction of angle 
+		obj_agent8.pos.x = obj_agent8.pos.x + sin(obj_agent8.rotation) * Agent8Speed;
+		obj_agent8.pos.y = obj_agent8.pos.y - cos(obj_agent8.rotation) * Agent8Speed;
+
+		// flying agent8 wrap around screen
+		Vector2f origin = PlayGraphics::Instance().GetSpriteOrigin(obj_agent8.spriteId);
+
+		if (obj_agent8.pos.x - origin.x - wrapBorderSize > DISPLAY_WIDTH)
+		{
+			obj_agent8.pos.x = 0.0f - wrapBorderSize + origin.x;
+		}
+		else if (obj_agent8.pos.x + origin.x + wrapBorderSize < 0)
+		{
+			obj_agent8.pos.x = DISPLAY_WIDTH + wrapBorderSize - origin.x;
 		}
 
-		obj_agent8.pos.x = obj_agent8.pos.x + sin(Agent8Angle) * Agent8RotSpeed;
-		obj_agent8.pos.y = obj_agent8.pos.y - cos(Agent8Angle) * Agent8RotSpeed;
+		if (obj_agent8.pos.y - origin.y - wrapBorderSize > DISPLAY_HEIGHT)
+		{
+			obj_agent8.pos.y = 0.0f - wrapBorderSize + origin.y;
+		}
+		else if (obj_agent8.pos.y + origin.y + wrapBorderSize < 0)
+		{
+			obj_agent8.pos.y = DISPLAY_HEIGHT + wrapBorderSize - origin.y;
+		}
 
 		Play::UpdateGameObject(obj_agent8);
 	}
@@ -166,8 +197,9 @@ void UpdateAsteroids()
 			obj_asteroid.pos.y = DISPLAY_HEIGHT + wrapBorderSize - origin.y;
 		}
 
-		if (Play::IsColliding(obj_agent8, obj_asteroid) && Play::KeyPressed(VK_SPACE))
+		if (gameState.agentState == Agent8State::STATE_FLYING)
 		{
+			// change this to only affect the asteroid attached to agent8
 			Play::SetSprite(obj_asteroid, "asteroid_pieces", 0);
 		}
 
@@ -230,6 +262,7 @@ void UpdateAgent8()
 	switch (gameState.agentState) 
 	{
 	case Agent8State::STATE_APPEAR:
+
 		if (Play::IsColliding(obj_agent8, obj_asteroid))
 		{
 			gameState.agentState = Agent8State::STATE_ATTACHED;
@@ -237,13 +270,16 @@ void UpdateAgent8()
 		break;
 	case Agent8State::STATE_ATTACHED:
 		PlayerControls();
-		if (Play::KeyPressed(VK_SPACE))
-		{
-			gameState.agentState = Agent8State::STATE_FLYING;
-		}
 		break;
 	case Agent8State::STATE_FLYING:
 		Play::SetSprite(obj_agent8, "agent8_fly", 0);
+		PlayerControls();
+
+		if (Play::IsColliding(obj_agent8, obj_asteroid)) 
+		{
+			obj_agent8.pos = obj_asteroid.pos;
+
+		}
 		break;
 	case Agent8State::STATE_DEAD:
 		Play::SetSprite(obj_agent8, "agent8_dead", 0.2f);
@@ -253,7 +289,10 @@ void UpdateAgent8()
 			gameState.agentState = Agent8State::STATE_APPEAR;
 		}
 		break;
+
 	} // end of switch
+
+	Play::UpdateGameObject(obj_agent8);
 }
 
 // called once the player quits the game
