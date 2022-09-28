@@ -40,6 +40,7 @@ enum GameObjectType
 	TYPE_ASTEROID,
 	TYPE_METEOR,
 	TYPE_ASTEROID_PIECES,
+	TYPE_GEM,
 };
 
 // function prototypes
@@ -49,8 +50,9 @@ void UpdateAgent8();
 void UpdateAsteroids();
 void SpawnMeteor();
 void UpdateMeteor();
-void SpawnAsteroidPieces();
-void UpdateAsteroidPieces();
+void SpawnPiecesAndGem();
+void UpdateBrokenPieces();
+void UpdateGem();
 
 
 // entry point for the playbuffer program
@@ -78,7 +80,8 @@ bool MainGameUpdate(float elapsedTime)
 	UpdateAsteroids();
 	UpdateAgent8();
 	UpdateMeteor();
-	UpdateAsteroidPieces();
+	UpdateBrokenPieces();
+	UpdateGem();
 	Play::DrawFontText("105px", "REMAINING GEMS: " + std::to_string(gameState.remainingGems), { DISPLAY_WIDTH / 2, 50 }, Play::CENTRE);
 	Play::DrawFontText("64px", "ARROW KEYS TO ROTATE AND SPACE BAR TO LAUNCH", { DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - 30 }, Play::CENTRE);
 	Play::PresentDrawingBuffer();
@@ -112,7 +115,7 @@ void PlayerControls()
 		if (Play::KeyPressed(VK_SPACE))
 		{
 			gameState.agentState = Agent8State::STATE_FLYING;
-			SpawnAsteroidPieces();
+			SpawnPiecesAndGem();
 			// destroy the asteroid agent8 jumps off
 			Play::DestroyGameObject(myAsteroid);	
 		}
@@ -163,7 +166,7 @@ void PlayerControls()
 	}
 }
 
-void SpawnAsteroidPieces() 
+void SpawnPiecesAndGem() 
 {
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
 
@@ -173,19 +176,44 @@ void SpawnAsteroidPieces()
 
 	// reset pos and move pieces 
 	GameObject& myAsteroidL = Play::GetGameObject(myAsteroidPieceIdL);
-	myAsteroidL.velocity = { -5, 0 };
+	myAsteroidL.velocity = { -8, 0 };
 	GameObject& myAsteroidR = Play::GetGameObject(myAsteroidPieceIdR);
-	myAsteroidR.velocity = { 5, 0 };
+	myAsteroidR.velocity = { 8, 0 };
 	GameObject& myAsteroidUp = Play::GetGameObject(myAsteroidPieceIdUp);
-	myAsteroidUp.velocity = { 0, -5 };
+	myAsteroidUp.velocity = { 0, -8 };
 
 	// set sprite frame
 	myAsteroidL.frame = 1;
 	myAsteroidR.frame = 2;
 	myAsteroidUp.frame = 0;
+
+	Play::CreateGameObject(TYPE_GEM, obj_agent8.pos, 20, "gem");
+
 }
 
-void UpdateAsteroidPieces()
+void UpdateGem() 
+{
+	if (gameState.agentState == Agent8State::STATE_FLYING || gameState.agentState == Agent8State::STATE_ATTACHED)
+	{
+		GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
+		std::vector<int> vGemIds = Play::CollectGameObjectIDsByType(TYPE_GEM);
+
+		for (int id_gem : vGemIds)
+		{
+			GameObject& obj_gem = Play::GetGameObject(id_gem);
+			Play::DrawObject(obj_gem);
+			Play::UpdateGameObject(obj_gem);
+
+			if (Play::IsColliding(obj_agent8, obj_gem)) // immediately collides oops
+			{
+				gameState.remainingGems++;
+				Play::DestroyGameObject(id_gem);
+			}
+		}
+	}
+}
+
+void UpdateBrokenPieces()
 {
 	std::vector<int> vPiecesIds = Play::CollectGameObjectIDsByType(TYPE_ASTEROID_PIECES);
 
