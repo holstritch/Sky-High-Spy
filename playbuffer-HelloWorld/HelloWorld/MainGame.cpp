@@ -39,6 +39,7 @@ enum GameObjectType
 	TYPE_AGENT8,
 	TYPE_ASTEROID,
 	TYPE_METEOR,
+	TYPE_ASTEROID_PIECES,
 };
 
 // function prototypes
@@ -48,6 +49,8 @@ void UpdateAgent8();
 void UpdateAsteroids();
 void SpawnMeteor();
 void UpdateMeteor();
+void SpawnAsteroidPieces();
+void UpdateAsteroidPieces();
 
 
 // entry point for the playbuffer program
@@ -63,7 +66,6 @@ void MainGameEntry(PLAY_IGNORE_COMMAND_LINE)
 	Play::SetSpriteOrigin("agent8_right", 50, 110);
 	SpawnAsteroids();
 	SpawnMeteor();
-
 }
 
 // called by playbuffer once for each frame 
@@ -76,6 +78,7 @@ bool MainGameUpdate(float elapsedTime)
 	UpdateAsteroids();
 	UpdateAgent8();
 	UpdateMeteor();
+	UpdateAsteroidPieces();
 	Play::DrawFontText("105px", "REMAINING GEMS: " + std::to_string(gameState.remainingGems), { DISPLAY_WIDTH / 2, 50 }, Play::CENTRE);
 	Play::DrawFontText("64px", "ARROW KEYS TO ROTATE AND SPACE BAR TO LAUNCH", { DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - 30 }, Play::CENTRE);
 	Play::PresentDrawingBuffer();
@@ -109,11 +112,9 @@ void PlayerControls()
 		if (Play::KeyPressed(VK_SPACE))
 		{
 			gameState.agentState = Agent8State::STATE_FLYING;
+			SpawnAsteroidPieces();
 			// destroy the asteroid agent8 jumps off
-			Play::DestroyGameObject(myAsteroid);
-			// create asteroid pieces 
-			// for each asteroid destroyed, spawn 3 asteroid pieces in its place, move them off screen then destroy
-			
+			Play::DestroyGameObject(myAsteroid);	
 		}
 		Play::UpdateGameObject(obj_agent8);
 	}
@@ -161,17 +162,50 @@ void PlayerControls()
 		Play::UpdateGameObject(obj_agent8);
 	}
 }
+
+void SpawnAsteroidPieces() 
+{
+	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
+
+	int myAsteroidPieceIdL = Play::CreateGameObject(TYPE_ASTEROID_PIECES, obj_agent8.pos, 50, "asteroid_pieces");
+	int myAsteroidPieceIdR = Play::CreateGameObject(TYPE_ASTEROID_PIECES, obj_agent8.pos, 50, "asteroid_pieces");
+	int myAsteroidPieceIdUp = Play::CreateGameObject(TYPE_ASTEROID_PIECES, obj_agent8.pos, 50, "asteroid_pieces");
+
+}
+
+void UpdateAsteroidPieces()
+{
+
+	// reset pos and move pieces 
+	GameObject& myAsteroidL = Play::GetGameObject(myAsteroidPieceIdL);
+	myAsteroidL.velocity = { -1, 0 };
+	GameObject& myAsteroidR = Play::GetGameObject(myAsteroidPieceIdR);
+	myAsteroidR.velocity = { 1, 0 };
+	GameObject& myAsteroidUp = Play::GetGameObject(myAsteroidPieceIdUp);
+	myAsteroidUp.velocity = { 0, 1 };
+
+	// set sprite frame
+	myAsteroidL.frame = 1;
+	myAsteroidR.frame = 2;
+	myAsteroidUp.frame = 0;
+	Play::DrawObject(myAsteroidL);
+	Play::DrawObject(myAsteroidR);
+	Play::DrawObject(myAsteroidUp);
+
+	Play::UpdateGameObject(myAsteroidL);
+	Play::UpdateGameObject(myAsteroidR);
+	Play::UpdateGameObject(myAsteroidUp);
+}
+
 void SpawnAsteroids() 
 {
-	for (int i = 0; i < 3; i++) 
+	for (int i = 0; i < 5; i++) 
 	{
 		int myAsteroidId = Play::CreateGameObject(TYPE_ASTEROID, { rand() % DISPLAY_WIDTH, rand() % DISPLAY_HEIGHT }, 50, "asteroid");
 		GameObject& myAsteroid = Play::GetGameObject(myAsteroidId);
 
 		myAsteroid.velocity = { rand() % 2 + (-1), rand() % 2 + 1 };
-
 	} 
-
 }
 
 void UpdateAsteroids() 
