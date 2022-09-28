@@ -171,30 +171,37 @@ void SpawnAsteroidPieces()
 	int myAsteroidPieceIdR = Play::CreateGameObject(TYPE_ASTEROID_PIECES, obj_agent8.pos, 50, "asteroid_pieces");
 	int myAsteroidPieceIdUp = Play::CreateGameObject(TYPE_ASTEROID_PIECES, obj_agent8.pos, 50, "asteroid_pieces");
 
-}
-
-void UpdateAsteroidPieces()
-{
-
 	// reset pos and move pieces 
 	GameObject& myAsteroidL = Play::GetGameObject(myAsteroidPieceIdL);
-	myAsteroidL.velocity = { -1, 0 };
+	myAsteroidL.velocity = { -5, 0 };
 	GameObject& myAsteroidR = Play::GetGameObject(myAsteroidPieceIdR);
-	myAsteroidR.velocity = { 1, 0 };
+	myAsteroidR.velocity = { 5, 0 };
 	GameObject& myAsteroidUp = Play::GetGameObject(myAsteroidPieceIdUp);
-	myAsteroidUp.velocity = { 0, 1 };
+	myAsteroidUp.velocity = { 0, -5 };
 
 	// set sprite frame
 	myAsteroidL.frame = 1;
 	myAsteroidR.frame = 2;
 	myAsteroidUp.frame = 0;
-	Play::DrawObject(myAsteroidL);
-	Play::DrawObject(myAsteroidR);
-	Play::DrawObject(myAsteroidUp);
+}
 
-	Play::UpdateGameObject(myAsteroidL);
-	Play::UpdateGameObject(myAsteroidR);
-	Play::UpdateGameObject(myAsteroidUp);
+void UpdateAsteroidPieces()
+{
+	std::vector<int> vPiecesIds = Play::CollectGameObjectIDsByType(TYPE_ASTEROID_PIECES);
+
+	for (int id_piece : vPiecesIds)
+	{
+		GameObject& obj_piece = Play::GetGameObject(id_piece);
+
+		Play::DrawObject(obj_piece);
+
+		Play::UpdateGameObject(obj_piece);
+
+		if (!Play::IsVisible(obj_piece))
+		{
+			Play::DestroyGameObject(id_piece);
+		}
+	}
 }
 
 void SpawnAsteroids() 
@@ -210,13 +217,15 @@ void SpawnAsteroids()
 
 void UpdateAsteroids() 
 {
-	std::vector<int> vAsteroidIds = Play::CollectGameObjectIDsByType(TYPE_ASTEROID);
 	GameObject& obj_meteor = Play::GetGameObjectByType(TYPE_METEOR);
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
 
-	for (int id_asteroids : vAsteroidIds) 
+	// for each asteroid id
+	std::vector<int> vAsteroidIds = Play::CollectGameObjectIDsByType(TYPE_ASTEROID);
+
+	for (int id_asteroid : vAsteroidIds) 
 	{
-		GameObject& obj_asteroid = Play::GetGameObject(id_asteroids);
+		GameObject& obj_asteroid = Play::GetGameObject(id_asteroid);
 
 		Vector2f origin = PlayGraphics::Instance().GetSpriteOrigin(obj_asteroid.spriteId);
 		// change direction of sprite 
