@@ -352,6 +352,9 @@ void UpdateMeteor()
 	
 	if (Play::IsColliding(obj_agent8, obj_meteor))
 	{
+		obj_agent8.velocity.x = sin(obj_agent8.rotation) * Agent8Speed;
+		obj_agent8.velocity.y = -cos(obj_agent8.rotation) * Agent8Speed;
+		
 		gameState.agentState = Agent8State::STATE_DEAD;
 	}
 	Play::DrawObjectRotated(obj_meteor);
@@ -382,7 +385,6 @@ void UpdateAgent8()
 					// declaring myAsteroid as the current attached asteroid
 					myAsteroid = id_asteroid;
 					gameState.agentState = Agent8State::STATE_ATTACHED;
-
 				}
 			}
 		}
