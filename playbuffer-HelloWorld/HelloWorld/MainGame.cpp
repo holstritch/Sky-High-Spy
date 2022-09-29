@@ -10,7 +10,7 @@ constexpr int wrapBorderSize = 20.0f;
 
 constexpr float Agent8RotSpeed = 0.05f;
 constexpr float Agent8FlyingRotSpeed = 0.02f;
-constexpr float Agent8Speed = 4.0f;
+constexpr float Agent8Speed = 8.0f;
 
 // storing the current asteroid
 int myAsteroid = 0;
@@ -63,7 +63,7 @@ void MainGameEntry(PLAY_IGNORE_COMMAND_LINE)
 	//Play::StartAudioLoop("music");
 	Play::CreateGameObject(TYPE_AGENT8, { 640, 360 }, 50, "agent8_left");
 	Play::CentreAllSpriteOrigins();
-	Play::SetSpriteOrigin("agent8_fly", 50, 110);
+	Play::SetSpriteOrigin("agent8_fly", 30, 110);
 	Play::SetSpriteOrigin("agent8_left", 50, 110);
 	Play::SetSpriteOrigin("agent8_right", 50, 110);
 	SpawnAsteroids();
@@ -101,6 +101,7 @@ void PlayerControls()
 		// position on current asteroid
 		GameObject& obj_asteroid = Play::GetGameObject(myAsteroid);
 		obj_agent8.pos = obj_asteroid.pos;
+		obj_agent8.velocity = { 0, 0 };
 
 		if (Play::KeyDown(VK_LEFT))
 		{
@@ -116,17 +117,18 @@ void PlayerControls()
 		{
 			gameState.agentState = Agent8State::STATE_FLYING;
 			SpawnPiecesAndGem();
+			// set velocity for flying & move away from gem
+			obj_agent8.velocity.x = sin(obj_agent8.rotation) * Agent8Speed;
+			obj_agent8.velocity.y = -cos(obj_agent8.rotation) * Agent8Speed;
+			obj_agent8.pos += obj_agent8.velocity * 8;
+
 			// destroy the asteroid agent8 jumps off
 			Play::DestroyGameObject(myAsteroid);	
 		}
-		Play::UpdateGameObject(obj_agent8);
 	}
 	// flying movement
 	if (gameState.agentState == Agent8State::STATE_FLYING) 
 	{
-		// reset position
-		obj_agent8.pos = obj_agent8.oldPos;
-		obj_agent8.pos += obj_agent8.velocity;
 		
 		//rotate
 		if (Play::KeyDown(VK_LEFT)) 
@@ -138,8 +140,8 @@ void PlayerControls()
 			obj_agent8.rotation += Agent8FlyingRotSpeed;
 		}
 		// move in direction of angle 
-		obj_agent8.pos.x = obj_agent8.pos.x + sin(obj_agent8.rotation) * Agent8Speed;
-		obj_agent8.pos.y = obj_agent8.pos.y - cos(obj_agent8.rotation) * Agent8Speed;
+		obj_agent8.velocity.x = sin(obj_agent8.rotation) * Agent8Speed;
+		obj_agent8.velocity.y = - cos(obj_agent8.rotation) * Agent8Speed;
 
 		// flying agent8 wrap around screen
 		Vector2f origin = PlayGraphics::Instance().GetSpriteOrigin(obj_agent8.spriteId);
@@ -161,8 +163,6 @@ void PlayerControls()
 		{
 			obj_agent8.pos.y = DISPLAY_HEIGHT + wrapBorderSize - origin.y;
 		}
-
-		Play::UpdateGameObject(obj_agent8);
 	}
 }
 
@@ -187,7 +187,7 @@ void SpawnPiecesAndGem()
 	myAsteroidR.frame = 2;
 	myAsteroidUp.frame = 0;
 
-	Play::CreateGameObject(TYPE_GEM, obj_agent8.pos, 20, "gem");
+	Play::CreateGameObject(TYPE_GEM, obj_agent8.pos, 10, "gem");
 
 }
 
@@ -196,6 +196,7 @@ void UpdateGem()
 	if (gameState.agentState == Agent8State::STATE_FLYING || gameState.agentState == Agent8State::STATE_ATTACHED)
 	{
 		GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
+
 		std::vector<int> vGemIds = Play::CollectGameObjectIDsByType(TYPE_GEM);
 
 		for (int id_gem : vGemIds)
@@ -382,15 +383,11 @@ void UpdateAgent8()
 		break;
 	case Agent8State::STATE_DEAD:
 		Play::SetSprite(obj_agent8, "agent8_dead", 0.2f);
-
-		// TO DO: move agent8 off screen
-
-		// TO DO: change direction of sprite
 	
-		if (Play::IsLeavingDisplayArea(obj_agent8)) 
+		/*if (Play::IsLeavingDisplayArea(obj_agent8))
 		{
 			gameState.agentState = Agent8State::STATE_APPEAR;
-		}
+		}*/
 		break;
 
 	} // end of switch
