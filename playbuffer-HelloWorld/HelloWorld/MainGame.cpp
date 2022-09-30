@@ -162,6 +162,7 @@ void PlayerControls()
 			obj_agent8.pos += obj_agent8.velocity * 8;
 
 			// destroy the asteroid agent8 jumps off
+			Play::PlayAudio("explode");
 			Play::DestroyGameObject(myAsteroid);	
 		}
 	}
@@ -249,9 +250,10 @@ void UpdateGem()
 			Play::DrawObject(obj_gem);
 			Play::UpdateGameObject(obj_gem);
 
-			if (Play::IsColliding(obj_agent8, obj_gem)) // immediately collides oops
+			if (Play::IsColliding(obj_agent8, obj_gem)) 
 			{
 				gameState.remainingGems++;
+				Play::PlayAudio("reward");
 				Play::DestroyGameObject(id_gem);
 			}
 		}
@@ -356,6 +358,7 @@ void UpdateMeteor()
 		obj_agent8.velocity.y = -cos(obj_agent8.rotation) * Agent8Speed;
 		
 		gameState.agentState = Agent8State::STATE_DEAD;
+		Play::PlayAudio("combust");
 	}
 	Play::DrawObjectRotated(obj_meteor);
 }
