@@ -341,7 +341,7 @@ void UpdateAsteroids()
 
 void SpawnMeteors() 
 {
-	for (int i = 0; i < 2; i++) 
+	for (int i = 0; i < 3; i++) 
 	{
 		int myMeteorId = Play::CreateGameObject(TYPE_METEOR, { rand() % DISPLAY_WIDTH, rand() % DISPLAY_HEIGHT }, 50, "meteor");
 		GameObject& obj_meteor = Play::GetGameObject(myMeteorId);
@@ -361,6 +361,8 @@ void UpdateMeteors()
 
 	for (int id_meteor : vMeteorIds) 
 	{
+		GameObject& obj_meteor = Play::GetGameObject(id_meteor);
+
 		// change direction of sprite
 		obj_meteor.rotation = atan2(obj_meteor.velocity.y, obj_meteor.velocity.x) + (PLAY_PI / 2);
 		Play::UpdateGameObject(obj_meteor);
@@ -369,17 +371,17 @@ void UpdateMeteors()
 		Vector2f origin = PlayGraphics::Instance().GetSpriteOrigin(obj_meteor.spriteId);
 		ScreenWrap(obj_meteor, origin);
 
-	}
+		Play::DrawObjectRotated(obj_meteor);
 
-	if (Play::IsColliding(obj_agent8, obj_meteor))
-	{
-		obj_agent8.velocity.x = sin(obj_agent8.rotation) * Agent8Speed;
-		obj_agent8.velocity.y = -cos(obj_agent8.rotation) * Agent8Speed;
+		if (Play::IsColliding(obj_agent8, obj_meteor))
+		{
+			obj_agent8.velocity.x = sin(obj_agent8.rotation) * Agent8Speed;
+			obj_agent8.velocity.y = -cos(obj_agent8.rotation) * Agent8Speed;
 
-		gameState.agentState = Agent8State::STATE_DEAD;
-		Play::PlayAudio("combust");
+			gameState.agentState = Agent8State::STATE_DEAD;
+			Play::PlayAudio("combust");
+		}
 	}
-	Play::DrawObjectRotated(obj_meteor);
 }
 
 void UpdateAgent8() 
