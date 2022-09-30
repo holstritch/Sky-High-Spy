@@ -67,7 +67,7 @@ void MainGameEntry(PLAY_IGNORE_COMMAND_LINE)
 {
 	Play::CreateManager(DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_SCALE);
 	Play::LoadBackground("Data\\Backgrounds\\background.png");
-	//Play::StartAudioLoop("music");
+	Play::StartAudioLoop("music");
 	Play::CreateGameObject(TYPE_AGENT8, { 640, 360 }, 50, "agent8_left");
 	Play::CentreAllSpriteOrigins();
 	Play::SetSpriteOrigin("agent8_fly", 30, 110);
