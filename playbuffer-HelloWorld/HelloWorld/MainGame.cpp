@@ -27,10 +27,9 @@ enum class Agent8State
 
 struct GameState 
 {
-	int remainingGems = 0;
+	int remainingGems = 5;
 	float timer = 0;
 	int spriteId = 0;
-	int particleCountDown = 0;
 	Agent8State agentState = Agent8State::STATE_APPEAR;
 };
 
@@ -50,7 +49,8 @@ enum GameObjectType
 // function prototypes
 float RandomFloatNumber();
 void ScreenWrap(GameObject& obj, Vector2f origin);
-void PlayerControls();
+void PlayerControlsAttached();
+void PlayerControlsFlying();
 void SpawnPiecesAndGem();
 void UpdateBrokenPieces();
 void UpdateGem();
@@ -58,8 +58,8 @@ void SpawnParticle(GameObject& obj);
 void UpdateParticles();
 void SpawnAsteroids();
 void UpdateAsteroids();
-void SpawnMeteor();
-void UpdateMeteor();
+void SpawnMeteors();
+void UpdateMeteors();
 void UpdateAgent8();
 
 // entry point for the playbuffer program
@@ -70,11 +70,11 @@ void MainGameEntry(PLAY_IGNORE_COMMAND_LINE)
 	Play::StartAudioLoop("music");
 	Play::CreateGameObject(TYPE_AGENT8, { 640, 360 }, 50, "agent8_left");
 	Play::CentreAllSpriteOrigins();
-	Play::SetSpriteOrigin("agent8_fly", 30, 110);
-	Play::SetSpriteOrigin("agent8_left", 50, 110);
-	Play::SetSpriteOrigin("agent8_right", 50, 110);
+	Play::SetSpriteOrigin("agent8_fly", 64, 50);
+	Play::SetSpriteOrigin("agent8_left", 64, 110);
+	Play::SetSpriteOrigin("agent8_right", 64, 110);
 	SpawnAsteroids();
-	SpawnMeteor();
+	SpawnMeteors();
 }
 
 // called by playbuffer once for each frame 
@@ -83,10 +83,11 @@ bool MainGameUpdate(float elapsedTime)
 	gameState.timer += elapsedTime;
 
 	Play::DrawBackground();
-	PlayerControls();
+	PlayerControlsAttached();
+	PlayerControlsFlying();
 	UpdateAsteroids();
 	UpdateAgent8();
-	UpdateMeteor();
+	UpdateMeteors();
 	UpdateBrokenPieces();
 	UpdateGem();
 	UpdateParticles();
@@ -128,7 +129,7 @@ void ScreenWrap(GameObject& obj, Vector2f origin)
 	}
 }
 
-void PlayerControls() 
+void PlayerControlsAttached() 
 {
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
 
@@ -141,17 +142,25 @@ void PlayerControls()
 		GameObject& obj_asteroid = Play::GetGameObject(myAsteroid);
 		obj_agent8.pos = obj_asteroid.pos;
 		obj_agent8.velocity = { 0, 0 };
+		Play::SetSprite(obj_agent8, "agent8_left", 0.2f);
 
 		if (Play::KeyDown(VK_LEFT))
 		{
 			Play::SetSprite(obj_agent8, "agent8_left", 0.2f);
 			obj_agent8.rotation -= Agent8RotSpeed;
+			obj_agent8.animSpeed = 1.0f;
 		}
-		if (Play::KeyDown(VK_RIGHT))
+		else if (Play::KeyDown(VK_RIGHT))
 		{
 			Play::SetSprite(obj_agent8, "agent8_right", 0.2f);
 			obj_agent8.rotation += Agent8RotSpeed;
+			obj_agent8.animSpeed = 1.0f;
 		}
+		else 
+		{
+			obj_agent8.animSpeed = 0.0f;
+		}
+
 		if (Play::KeyPressed(VK_SPACE))
 		{
 			gameState.agentState = Agent8State::STATE_FLYING;
@@ -166,11 +175,17 @@ void PlayerControls()
 			Play::DestroyGameObject(myAsteroid);	
 		}
 	}
+}
+
+void PlayerControlsFlying() 
+{
+	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
+
 	// flying movement
-	if (gameState.agentState == Agent8State::STATE_FLYING) 
+	if (gameState.agentState == Agent8State::STATE_FLYING)
 	{
 		//rotate
-		if (Play::KeyDown(VK_LEFT)) 
+		if (Play::KeyDown(VK_LEFT))
 		{
 			obj_agent8.rotation -= Agent8FlyingRotSpeed;
 		}
@@ -180,18 +195,13 @@ void PlayerControls()
 		}
 		// move in direction of angle 
 		obj_agent8.velocity.x = sin(obj_agent8.rotation) * Agent8Speed;
-		obj_agent8.velocity.y = - cos(obj_agent8.rotation) * Agent8Speed;
+		obj_agent8.velocity.y = -cos(obj_agent8.rotation) * Agent8Speed;
 
 		// flying agent8 wrap around screen
 		Vector2f origin = PlayGraphics::Instance().GetSpriteOrigin(obj_agent8.spriteId);
 		ScreenWrap(obj_agent8, origin);
 	}
-	if (gameState.agentState == Agent8State::STATE_DEAD) 
-	{
-		// shoot agent8 offscreen in pos facing
-	}
 }
-
 void SpawnPiecesAndGem() 
 {
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
@@ -252,7 +262,7 @@ void UpdateGem()
 
 			if (Play::IsColliding(obj_agent8, obj_gem)) 
 			{
-				gameState.remainingGems++;
+				gameState.remainingGems--;
 				Play::PlayAudio("reward");
 				Play::DestroyGameObject(id_gem);
 			}
@@ -263,7 +273,6 @@ void UpdateGem()
 void SpawnParticle(GameObject& obj) 
 {
 	int particleId = Play::CreateGameObject(TYPE_PARTICLE, obj.pos, 50, "particle");
-	gameState.particleCountDown = 2;
 	GameObject& obj_particle = Play::GetGameObject(particleId);
 	obj_particle.velocity = { RandomFloatNumber(), RandomFloatNumber() };
 	obj_particle.timeStamp = gameState.timer;
@@ -273,11 +282,10 @@ void UpdateParticles()
 {
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
 	
-	if (gameState.agentState == Agent8State::STATE_FLYING) //&& gameState.particleCountDown <= 0
+	if (gameState.agentState == Agent8State::STATE_FLYING) 
 	{ 
 		SpawnParticle(obj_agent8);
 	}
-	gameState.particleCountDown--;
 
 	std::vector<int> vParticleIds = Play::CollectGameObjectIDsByType(TYPE_PARTICLE);
 
@@ -285,7 +293,8 @@ void UpdateParticles()
 	{
 		GameObject& obj_particle = Play::GetGameObject(id_particle);
 
-		Play::DrawObject(obj_particle);
+		if ((gameState.timer - obj_particle.timeStamp) > 0.075f)
+		    Play::DrawObject(obj_particle);
 
 		Play::UpdateGameObject(obj_particle);
 
@@ -328,35 +337,45 @@ void UpdateAsteroids()
 
 		Play::DrawObjectRotated(obj_asteroid);
 	}
-
 }
 
-void SpawnMeteor() 
+void SpawnMeteors() 
 {
-	int myMeteorId= Play::CreateGameObject(TYPE_METEOR, { rand() % DISPLAY_WIDTH, rand() % DISPLAY_HEIGHT }, 50, "meteor");
-	GameObject& obj_meteor = Play::GetGameObject(myMeteorId);
+	for (int i = 0; i < 2; i++) 
+	{
+		int myMeteorId = Play::CreateGameObject(TYPE_METEOR, { rand() % DISPLAY_WIDTH, rand() % DISPLAY_HEIGHT }, 50, "meteor");
+		GameObject& obj_meteor = Play::GetGameObject(myMeteorId);
 
-	obj_meteor.velocity = { rand() % 5 + (-1), rand() % 5 + 1 };
+		obj_meteor.velocity = { rand() % 5 + (-1), rand() % 5 + 1 };
+		obj_meteor.animSpeed = 0.1f;
+	}
 }
 
-void UpdateMeteor() 
+void UpdateMeteors() 
 {
 	GameObject& obj_agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
 	GameObject& obj_meteor = Play::GetGameObjectByType(TYPE_METEOR);
 
-	// change direction of sprite
-	obj_meteor.rotation = atan2(obj_meteor.velocity.y, obj_meteor.velocity.x) + (PLAY_PI / 2);
-	Play::UpdateGameObject(obj_meteor);
+	// for each meteor id
+	std::vector<int> vMeteorIds = Play::CollectGameObjectIDsByType(TYPE_METEOR);
 
-	// meteor wraps around screen
-	Vector2f origin = PlayGraphics::Instance().GetSpriteOrigin(obj_meteor.spriteId);
-	ScreenWrap(obj_meteor, origin);
-	
+	for (int id_meteor : vMeteorIds) 
+	{
+		// change direction of sprite
+		obj_meteor.rotation = atan2(obj_meteor.velocity.y, obj_meteor.velocity.x) + (PLAY_PI / 2);
+		Play::UpdateGameObject(obj_meteor);
+
+		// meteor wraps around screen
+		Vector2f origin = PlayGraphics::Instance().GetSpriteOrigin(obj_meteor.spriteId);
+		ScreenWrap(obj_meteor, origin);
+
+	}
+
 	if (Play::IsColliding(obj_agent8, obj_meteor))
 	{
 		obj_agent8.velocity.x = sin(obj_agent8.rotation) * Agent8Speed;
 		obj_agent8.velocity.y = -cos(obj_agent8.rotation) * Agent8Speed;
-		
+
 		gameState.agentState = Agent8State::STATE_DEAD;
 		Play::PlayAudio("combust");
 	}
@@ -393,12 +412,12 @@ void UpdateAgent8()
 		}
 		break;
 	case Agent8State::STATE_ATTACHED:
-		PlayerControls();
+		PlayerControlsAttached();
 		break;
 	case Agent8State::STATE_FLYING:
 		{
 			Play::SetSprite(obj_agent8, "agent8_fly", 0);
-			PlayerControls();
+			PlayerControlsFlying();
 
 			std::vector<int> vAsteroidIds = Play::CollectGameObjectIDsByType(TYPE_ASTEROID);
 			for (int id_asteroid : vAsteroidIds)
